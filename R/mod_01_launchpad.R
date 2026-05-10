@@ -170,7 +170,7 @@ mod_01_launchpad_ui <- function(id) {
             div(class = "content-panel right-panel",
                 div(class = "toolbar-right",
                     actionButton(ns("btn_sec_enter"), "Engine", class = "btn-rscience btn-category"),
-                    actionButton(ns("btn_dist"), "Distributions", class = "btn-rscience btn-category"),
+                    actionButton(ns("btn_glm"), "GLM", class = "btn-rscience btn-category"),
                     actionButton(ns("btn_class"), "ClassRoom", class = "btn-rscience btn-category"),
                     actionButton(ns("btn_extra"), "Extra", class = "btn-rscience btn-category")
                 ),
@@ -221,7 +221,7 @@ mod_01_launchpad_server <- function(id, show_debug = FALSE) {
     # --- EVENTOS ---
     observeEvent(input$btn_enter,     { fire_navigation("engine") })
     observeEvent(input$btn_sec_enter, { fire_navigation("engine") })
-    observeEvent(input$btn_dist,      { fire_navigation("distributions") })
+    observeEvent(input$btn_glm,       { fire_navigation("glm") })
     observeEvent(input$btn_class,     { fire_navigation("classroom") })
     observeEvent(input$btn_extra,     { fire_navigation("extra") })
 

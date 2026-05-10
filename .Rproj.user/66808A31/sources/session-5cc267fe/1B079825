@@ -1,0 +1,27 @@
+{
+    "id": "1B079825",
+    "path": "C:/Users/Legion/bulk/MyTesis/f01_software/f01_installer_legion/R_space/legionGOESapp/inst/shiny/myApp/app.R",
+    "project_path": "inst/shiny/myApp/app.R",
+    "type": "r_source",
+    "hash": "0",
+    "contents": "",
+    "dirty": false,
+    "created": 1778251641440.0,
+    "source_on_save": false,
+    "relative_order": 4,
+    "properties": {
+        "tempName": "Untitled1",
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "88,0",
+        "scrollLine": "51"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1778360089,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1778360089791,
+    "read_only": false,
+    "read_only_alternatives": []
+}

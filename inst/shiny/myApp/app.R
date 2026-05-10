@@ -11,8 +11,11 @@ devtools::load_all()
 
 # UI - page_fillable
 ui <- page_fillable(
-  # Título que aparece en la pestaña
   title = "LegionGoes - GIS Analysis",
+  padding = 0,
+  gap = 0,
+  fillable_mobile = TRUE,
+
   theme = bs_theme(
     version = 5,
     bg = "#0b1218",
@@ -20,19 +23,47 @@ ui <- page_fillable(
     primary = "#00d4ff"
   ),
 
-  # Inicializar shinyjs
   shinyjs::useShinyjs(),
 
-  # Configuración del Logo (Favicon)
   tags$head(
-    # IMPORTANTE: Shiny sirve lo que está en /www directamente en la raíz "/"
-    # Por eso usamos "logo.png" y no "www/logo.png"
-    tags$link(rel = "icon", type = "image/png", href =  paste0("logo.png?v=", Sys.time())),
-    tags$link(rel = "shortcut icon", href =  paste0("logo.png?v=", Sys.time())),
-    tags$link(rel = "apple-touch-icon", href =  paste0("logo.png?v=", Sys.time()))
+    tags$style(HTML("
+      html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #0b1218;
+      }
+
+      body > .container-fluid {
+        padding: 0 !important;
+        margin: 0 !important;
+        max-width: none !important;
+        width: 100% !important;
+      }
+
+      .bslib-page-fill {
+        padding: 0 !important;
+        margin: 0 !important;
+        gap: 0 !important;
+      }
+
+      .tab-content,
+      .tab-pane,
+      .nav-hidden-content {
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100%;
+        height: 100%;
+      }
+    ")),
+
+    tags$link(rel = "icon", type = "image/png", href = paste0("logo.png?v=", Sys.time())),
+    tags$link(rel = "shortcut icon", href = paste0("logo.png?v=", Sys.time())),
+    tags$link(rel = "apple-touch-icon", href = paste0("logo.png?v=", Sys.time()))
   ),
 
-  # Estructura de Navegación
   navset_hidden(
     id = "main_nav",
 
@@ -51,34 +82,65 @@ ui <- page_fillable(
 # SERVER
 server <- function(input, output, session) {
 
-  # Lógica del Launchpad
+  # ---------------------------------------------------------------------------
+  # Estado global de navegación
+  # ---------------------------------------------------------------------------
+  current_tab <- reactiveVal("page_launchpad")
+
+  # Guarda el último trigger del launchpad ya procesado
+  last_launchpad_trigger <- reactiveVal(0)
+
+  # ---------------------------------------------------------------------------
+  # Módulos
+  # ---------------------------------------------------------------------------
+
   launchpad_res <- mod_01_launchpad_server("launchpad_v1")
 
-  # Lógica del Satélite/Globo
   mod_satelliteGlobe_server("sat01")
 
+  # ---------------------------------------------------------------------------
   # Navegación: Launchpad -> Engine
+  # ---------------------------------------------------------------------------
+
   observeEvent(launchpad_res(), {
     status <- launchpad_res()
-    req(status$nav_trigger > 0)
+
+    req(!is.null(status$nav_trigger))
+    req(!is.null(status$target_page))
+
+    # Si este trigger ya fue procesado, no hacer nada
+    if (status$nav_trigger <= last_launchpad_trigger()) {
+      return()
+    }
+
+    # Registrar que ya procesamos este trigger
+    last_launchpad_trigger(status$nav_trigger)
 
     if (status$target_page == "engine") {
-      nav_select(
-        id = "main_nav",
-        selected = "page_engine",
-        session = session
-      )
+      current_tab("page_engine")
     }
-  })
 
+  }, ignoreInit = TRUE)
+
+  # ---------------------------------------------------------------------------
   # Navegación: Engine -> Launchpad
+  # ---------------------------------------------------------------------------
+
   observeEvent(input[["sat01-btn_go_home"]], {
+    current_tab("page_launchpad")
+  }, ignoreInit = TRUE)
+
+  # ---------------------------------------------------------------------------
+  # Único lugar donde realmente se cambia el navset
+  # ---------------------------------------------------------------------------
+
+  observeEvent(current_tab(), {
     nav_select(
       id = "main_nav",
-      selected = "page_launchpad",
+      selected = current_tab(),
       session = session
     )
-  })
+  }, ignoreInit = FALSE)
 }
 
 # LANZAR APLICACIÓN

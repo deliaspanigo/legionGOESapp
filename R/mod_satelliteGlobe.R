@@ -33,6 +33,12 @@ mod_satelliteGlobe_ui <- function(id) {
           "×"
         ),
 
+        actionButton(
+          inputId = ns("btn_go_home"),
+          label = "← Launcher",
+          class = "sg-home-floating"
+        ),
+
         div(
           id = ns("panel"),
           class = "sg-panel",
@@ -81,6 +87,48 @@ mod_satelliteGlobe_ui <- function(id) {
               checked = "checked"
             ),
             "Mostrar nombres de satélites"
+          ),
+
+          div(
+            class = "visual-control",
+            tags$label("Modo de iluminación"),
+            tags$select(
+              id = ns("lighting_mode"),
+              class = "sg-select",
+              tags$option(
+                value = "real_plus_fill",
+                selected = "selected",
+                "Solar real + estética suave"
+              ),
+              tags$option(
+                value = "real_only",
+                "Solo Sol real"
+              )
+            )
+          ),
+
+          div(
+            class = "visual-control",
+            tags$label("Modo de referencia visual"),
+            tags$select(
+              id = ns("reference_mode"),
+              class = "sg-select",
+              tags$option(
+                value = "equatorial",
+                selected = "selected",
+                "Ecuatorial / Tierra derecha"
+              ),
+              tags$option(
+                value = "tilted",
+                "Inclinación terrestre real"
+              )
+            )
+          ),
+
+          div(
+            id = ns("reference_note"),
+            class = "sg-reference-note",
+            "Referencia: ecuador como plano principal."
           ),
 
           div(class = "section-title", "Matriz de visualización"),
@@ -149,6 +197,9 @@ mod_satelliteGlobe_ui <- function(id) {
       reload_tle_id = ns("reload_tle"),
       orbit_width_id = ns("orbit_width"),
       show_labels_id = ns("show_labels"),
+      lighting_mode_id = ns("lighting_mode"),
+      reference_mode_id = ns("reference_mode"),
+      reference_note_id = ns("reference_note"),
       status_id = ns("status"),
       clock_id = ns("clock"),
       table_body_id = ns("sat_table_body"),
@@ -160,8 +211,7 @@ mod_satelliteGlobe_ui <- function(id) {
 
 mod_satelliteGlobe_server <- function(id) {
   moduleServer(id, function(input, output, session) {
-    # Por ahora el motor funciona completamente en JavaScript.
-    # Este server queda preparado para extender el módulo luego.
+    # Motor JavaScript.
   })
 }
 
@@ -301,6 +351,29 @@ satellite_globe_css <- function(root_id) {
       left: 20px;
     }
 
+    #__ROOT_ID__ .sg-home-floating {
+      position: absolute;
+      left: 20px;
+      bottom: 20px;
+      z-index: 20;
+      width: auto;
+      min-width: 130px;
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 12px;
+      padding: 10px 14px;
+      background: rgba(249, 115, 22, 0.92);
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+      backdrop-filter: blur(8px);
+    }
+
+    #__ROOT_ID__ .sg-home-floating:hover {
+      background: rgba(234, 88, 12, 0.98);
+      color: white;
+    }
+
     #__ROOT_ID__ .sg-panel h3 {
       margin-top: 0;
       margin-bottom: 10px;
@@ -360,6 +433,27 @@ satellite_globe_css <- function(root_id) {
 
     #__ROOT_ID__ .visual-control input[type=range] {
       width: 100%;
+    }
+
+    #__ROOT_ID__ .sg-select {
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      padding: 8px 10px;
+      background: rgba(15, 23, 42, 0.92);
+      color: white;
+      font-size: 12px;
+    }
+
+    #__ROOT_ID__ .sg-reference-note {
+      margin-top: 7px;
+      padding: 7px 9px;
+      border-radius: 10px;
+      background: rgba(15, 23, 42, 0.62);
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      color: #cbd5e1;
+      font-size: 11px;
+      line-height: 1.35;
     }
 
     #__ROOT_ID__ .sat-check {
@@ -471,6 +565,9 @@ satellite_globe_js <- function(
     reload_tle_id,
     orbit_width_id,
     show_labels_id,
+    lighting_mode_id,
+    reference_mode_id,
+    reference_note_id,
     status_id,
     clock_id,
     table_body_id,
@@ -487,6 +584,9 @@ satellite_globe_js <- function(
       const RELOAD_TLE_ID = '__RELOAD_TLE_ID__';
       const ORBIT_WIDTH_ID = '__ORBIT_WIDTH_ID__';
       const SHOW_LABELS_ID = '__SHOW_LABELS_ID__';
+      const LIGHTING_MODE_ID = '__LIGHTING_MODE_ID__';
+      const REFERENCE_MODE_ID = '__REFERENCE_MODE_ID__';
+      const REFERENCE_NOTE_ID = '__REFERENCE_NOTE_ID__';
       const STATUS_ID = '__STATUS_ID__';
       const CLOCK_ID = '__CLOCK_ID__';
       const TABLE_BODY_ID = '__TABLE_BODY_ID__';
@@ -501,7 +601,8 @@ satellite_globe_js <- function(
       }
 
       let scene, camera, renderer, controls;
-      let earthGroup;
+      let referenceGroup, earthGroup;
+      let ambientLight, sunLight, blueFillLight;
       let satellitesData = [];
       let animationRunning = true;
 
@@ -512,6 +613,7 @@ satellite_globe_js <- function(
       const TABLE_UPDATE_MS = 1000;
 
       const EARTH_RADIUS_KM = 6371.0;
+      const EARTH_OBLIQUITY_DEG = 23.439281;
 
       const earthRadiusScene = 2.0;
       const kmToScene = earthRadiusScene / EARTH_RADIUS_KM;
@@ -608,6 +710,9 @@ satellite_globe_js <- function(
 
         scene = new THREE.Scene();
 
+        referenceGroup = new THREE.Group();
+        scene.add(referenceGroup);
+
         const w = container.clientWidth || window.innerWidth;
         const h = container.clientHeight || window.innerHeight;
 
@@ -639,6 +744,8 @@ satellite_globe_js <- function(
 
         addLights();
         createEarth();
+        updateReferenceMode();
+        updateSunLighting(new Date());
 
         const menuButton = byId(MENU_TOGGLE_ID);
         if (menuButton) {
@@ -673,6 +780,22 @@ satellite_globe_js <- function(
         if (reloadButton) {
           reloadButton.addEventListener('click', function() {
             loadTLEs();
+          });
+        }
+
+        const lightingModeInput = byId(LIGHTING_MODE_ID);
+        if (lightingModeInput) {
+          lightingModeInput.addEventListener('change', function() {
+            updateSunLighting(new Date());
+          });
+        }
+
+        const referenceModeInput = byId(REFERENCE_MODE_ID);
+        if (referenceModeInput) {
+          referenceModeInput.addEventListener('change', function() {
+            updateReferenceMode();
+            updateSunLighting(new Date());
+            updateAllSatelliteLabels();
           });
         }
 
@@ -816,8 +939,8 @@ satellite_globe_js <- function(
 
       function clearSatellites() {
         satellitesData.forEach(function(sat) {
-          scene.remove(sat.mesh);
-          scene.remove(sat.orbitLine);
+          referenceGroup.remove(sat.mesh);
+          referenceGroup.remove(sat.orbitLine);
 
           disposeObject3D(sat.mesh);
           disposeObject3D(sat.orbitLine);
@@ -828,7 +951,7 @@ satellite_globe_js <- function(
           }
 
           if (sat.coneObject) {
-            scene.remove(sat.coneObject);
+            referenceGroup.remove(sat.coneObject);
             disposeObject3D(sat.coneObject);
           }
 
@@ -849,16 +972,16 @@ satellite_globe_js <- function(
         const satrec = satellite.twoline2satrec(line1, line2);
 
         const mesh = createSatelliteMesh(spec.color, spec.type);
-        scene.add(mesh);
+        referenceGroup.add(mesh);
 
         const orbitLine = createOrbitLineFromTLE(satrec, spec.color, spec.type);
-        scene.add(orbitLine);
+        referenceGroup.add(orbitLine);
 
         const footprintObject = new THREE.Group();
         earthGroup.add(footprintObject);
 
         const coneObject = new THREE.Group();
-        scene.add(coneObject);
+        referenceGroup.add(coneObject);
 
         const label = document.createElement('div');
         label.className = 'sat-label';
@@ -892,21 +1015,145 @@ satellite_globe_js <- function(
       }
 
       function addLights() {
-        const ambient = new THREE.AmbientLight(0xffffff, 0.70);
-        scene.add(ambient);
+        ambientLight = new THREE.AmbientLight(0xffffff, 0.28);
+        scene.add(ambientLight);
 
-        const sun = new THREE.DirectionalLight(0xffffff, 1.35);
-        sun.position.set(5, 3, 5);
-        scene.add(sun);
+        sunLight = new THREE.DirectionalLight(0xffffff, 1.75);
+        sunLight.position.set(5, 3, 5);
+        sunLight.target.position.set(0, 0, 0);
+        scene.add(sunLight);
+        scene.add(sunLight.target);
 
-        const blueFill = new THREE.PointLight(0x60a5fa, 0.8, 30);
-        blueFill.position.set(-5, -2, -4);
-        scene.add(blueFill);
+        blueFillLight = new THREE.PointLight(0x60a5fa, 0.25, 30);
+        blueFillLight.position.set(-5, -2, -4);
+        scene.add(blueFillLight);
+      }
+
+      function getJulianDate(date) {
+        return date.getTime() / 86400000 + 2440587.5;
+      }
+
+      function normalizeAngleDeg(angle) {
+        let out = angle % 360;
+        if (out < 0) out += 360;
+        return out;
+      }
+
+      function getSunEciUnitVector(date) {
+        const jd = getJulianDate(date);
+        const n = jd - 2451545.0;
+
+        const meanLongitudeDeg = normalizeAngleDeg(280.460 + 0.9856474 * n);
+        const meanAnomalyDeg = normalizeAngleDeg(357.528 + 0.9856003 * n);
+
+        const g = THREE.MathUtils.degToRad(meanAnomalyDeg);
+
+        const eclipticLongitudeDeg =
+          meanLongitudeDeg +
+          1.915 * Math.sin(g) +
+          0.020 * Math.sin(2 * g);
+
+        const lambda = THREE.MathUtils.degToRad(
+          normalizeAngleDeg(eclipticLongitudeDeg)
+        );
+
+        const epsilon = THREE.MathUtils.degToRad(
+          23.439 - 0.0000004 * n
+        );
+
+        const x = Math.cos(lambda);
+        const y = Math.cos(epsilon) * Math.sin(lambda);
+        const z = Math.sin(epsilon) * Math.sin(lambda);
+
+        return new THREE.Vector3(x, y, z).normalize();
+      }
+
+      function eciUnitToSceneVector(v) {
+        return new THREE.Vector3(
+          v.x,
+          v.z,
+          -v.y
+        ).normalize();
+      }
+
+      function updateSunLighting(date) {
+        if (!sunLight || !ambientLight || !blueFillLight) {
+          return;
+        }
+
+        const sunEci = getSunEciUnitVector(date);
+        let sunScene = eciUnitToSceneVector(sunEci);
+
+        const referenceModeInput = byId(REFERENCE_MODE_ID);
+        const referenceMode = referenceModeInput ? referenceModeInput.value : 'equatorial';
+
+        if (referenceMode === 'tilted') {
+          const q = new THREE.Quaternion();
+          q.setFromEuler(
+            new THREE.Euler(
+              THREE.MathUtils.degToRad(-EARTH_OBLIQUITY_DEG),
+              0,
+              0
+            )
+          );
+
+          sunScene.applyQuaternion(q);
+        }
+
+        sunScene.normalize();
+
+        sunLight.position.copy(
+          sunScene.clone().multiplyScalar(20)
+        );
+
+        sunLight.target.position.set(0, 0, 0);
+        sunLight.target.updateMatrixWorld();
+
+        const lightingModeInput = byId(LIGHTING_MODE_ID);
+        const lightingMode = lightingModeInput ? lightingModeInput.value : 'real_plus_fill';
+
+        if (lightingMode === 'real_only') {
+          ambientLight.intensity = 0.06;
+          sunLight.intensity = 2.15;
+          blueFillLight.intensity = 0.00;
+        } else {
+          ambientLight.intensity = 0.28;
+          sunLight.intensity = 1.75;
+          blueFillLight.intensity = 0.25;
+        }
+      }
+
+      function updateReferenceMode() {
+        if (!referenceGroup) {
+          return;
+        }
+
+        const referenceModeInput = byId(REFERENCE_MODE_ID);
+        const referenceMode = referenceModeInput ? referenceModeInput.value : 'equatorial';
+        const referenceNote = byId(REFERENCE_NOTE_ID);
+
+        if (referenceMode === 'tilted') {
+          referenceGroup.rotation.x = THREE.MathUtils.degToRad(EARTH_OBLIQUITY_DEG);
+
+          if (referenceNote) {
+            referenceNote.innerText =
+              'Referencia: inclinación terrestre real aproximada de 23.44° respecto del plano eclíptico. Útil para mostrar la relación Sol-Tierra y la estacionalidad.';
+          }
+        } else {
+          referenceGroup.rotation.x = 0;
+
+          if (referenceNote) {
+            referenceNote.innerText =
+              'Referencia: ecuador como plano principal. Útil para análisis orbital, latitud, longitud y coberturas.';
+          }
+        }
+
+        referenceGroup.updateMatrixWorld(true);
       }
 
       function createEarth() {
         earthGroup = new THREE.Group();
-        scene.add(earthGroup);
+        referenceGroup.add(earthGroup);
 
         const textureLoader = new THREE.TextureLoader();
         textureLoader.crossOrigin = '';
@@ -1204,7 +1451,7 @@ satellite_globe_js <- function(
       function rebuildOrbitLines() {
         satellitesData.forEach(function(sat) {
           if (sat.orbitLine) {
-            scene.remove(sat.orbitLine);
+            referenceGroup.remove(sat.orbitLine);
             disposeObject3D(sat.orbitLine);
           }
 
@@ -1214,7 +1461,7 @@ satellite_globe_js <- function(
             sat.type
           );
 
-          scene.add(sat.orbitLine);
+          referenceGroup.add(sat.orbitLine);
         });
 
         updateVisibility();
@@ -1318,7 +1565,7 @@ satellite_globe_js <- function(
         return 100 * area / getEarthSurfaceAreaKm2();
       }
 
-      function updateFootprint(sat, satWorldPosition) {
+      function updateFootprint(sat, satLocalPosition) {
         clearGroup(sat.footprintObject);
         clearGroup(sat.coneObject);
 
@@ -1426,25 +1673,26 @@ satellite_globe_js <- function(
         const ringMesh = new THREE.Mesh(ringGeometry, ringMaterial);
         sat.footprintObject.add(ringMesh);
 
-        const ringWorldPoints = ringLocalPoints.map(function(p) {
-          return earthGroup.localToWorld(p.clone());
+        const ringReferencePoints = ringLocalPoints.map(function(p) {
+          const worldPoint = earthGroup.localToWorld(p.clone());
+          return referenceGroup.worldToLocal(worldPoint);
         });
 
         const conePositions = [];
         const coneIndices = [];
 
         conePositions.push(
-          satWorldPosition.x,
-          satWorldPosition.y,
-          satWorldPosition.z
+          satLocalPosition.x,
+          satLocalPosition.y,
+          satLocalPosition.z
         );
 
-        ringWorldPoints.forEach(function(p) {
+        ringReferencePoints.forEach(function(p) {
           conePositions.push(p.x, p.y, p.z);
         });
 
-        for (let i = 1; i <= ringWorldPoints.length; i++) {
-          const next = i < ringWorldPoints.length ? i + 1 : 1;
+        for (let i = 1; i <= ringReferencePoints.length; i++) {
+          const next = i < ringReferencePoints.length ? i + 1 : 1;
           coneIndices.push(0, i, next);
         }
 
@@ -1549,9 +1797,13 @@ satellite_globe_js <- function(
 
       function isSatelliteOccludedByEarth(sat) {
         const cameraPos = camera.position.clone();
-        const satPos = sat.mesh.position.clone();
 
-        const earthCenter = new THREE.Vector3(0, 0, 0);
+        const satPos = new THREE.Vector3();
+        sat.mesh.getWorldPosition(satPos);
+
+        const earthCenter = new THREE.Vector3();
+        earthGroup.getWorldPosition(earthCenter);
+
         const earthRadius = earthRadiusScene * 1.03;
 
         const direction = satPos.clone().sub(cameraPos);
@@ -1597,7 +1849,8 @@ satellite_globe_js <- function(
           return;
         }
 
-        const vector = sat.mesh.position.clone();
+        const vector = new THREE.Vector3();
+        sat.mesh.getWorldPosition(vector);
         vector.project(camera);
 
         if (vector.z < -1 || vector.z > 1) {
@@ -1719,6 +1972,7 @@ satellite_globe_js <- function(
         const now = new Date();
 
         updateClock(now);
+        updateSunLighting(now);
 
         if (animationRunning) {
           updateEarthRotation(now);
@@ -1779,6 +2033,9 @@ satellite_globe_js <- function(
     "__RELOAD_TLE_ID__" = reload_tle_id,
     "__ORBIT_WIDTH_ID__" = orbit_width_id,
     "__SHOW_LABELS_ID__" = show_labels_id,
+    "__LIGHTING_MODE_ID__" = lighting_mode_id,
+    "__REFERENCE_MODE_ID__" = reference_mode_id,
+    "__REFERENCE_NOTE_ID__" = reference_note_id,
     "__STATUS_ID__" = status_id,
     "__CLOCK_ID__" = clock_id,
     "__TABLE_BODY_ID__" = table_body_id,

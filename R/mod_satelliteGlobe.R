@@ -79,30 +79,19 @@ mod_satelliteGlobe_ui <- function(id) {
           ),
 
           div(
-            class = "sat-check",
-            style = "margin-top: 8px;",
-            tags$input(
-              type = "checkbox",
-              id = ns("show_labels"),
-              checked = "checked"
-            ),
-            "Mostrar nombres de satélites"
-          ),
-
-          div(
             class = "visual-control",
             tags$label("Modo de iluminación"),
             tags$select(
               id = ns("lighting_mode"),
               class = "sg-select",
               tags$option(
-                value = "real_plus_fill",
+                value = "real_only",
                 selected = "selected",
-                "Solar real + estética suave"
+                "Solo Sol real"
               ),
               tags$option(
-                value = "real_only",
-                "Solo Sol real"
+                value = "real_plus_fill",
+                "Solar real + estética suave"
               )
             )
           ),
@@ -114,13 +103,13 @@ mod_satelliteGlobe_ui <- function(id) {
               id = ns("reference_mode"),
               class = "sg-select",
               tags$option(
-                value = "equatorial",
+                value = "tilted",
                 selected = "selected",
-                "Ecuatorial / Tierra derecha"
+                "Plano solar / eclíptico"
               ),
               tags$option(
-                value = "tilted",
-                "Inclinación terrestre real"
+                value = "equatorial",
+                "Plano ecuatorial terrestre"
               )
             )
           ),
@@ -128,7 +117,7 @@ mod_satelliteGlobe_ui <- function(id) {
           div(
             id = ns("reference_note"),
             class = "sg-reference-note",
-            "Referencia: ecuador como plano principal."
+            "Referencia: plano solar/eclíptico. Tierra inclinada respecto del plano de iluminación."
           ),
 
           div(class = "section-title", "Matriz de visualización"),
@@ -138,6 +127,7 @@ mod_satelliteGlobe_ui <- function(id) {
             tags$thead(
               tags$tr(
                 tags$th("Satélite"),
+                tags$th("Todo"),
                 tags$th("Sat"),
                 tags$th("Órbita"),
                 tags$th("Cobertura"),
@@ -196,7 +186,6 @@ mod_satelliteGlobe_ui <- function(id) {
       toggle_animation_id = ns("toggle_animation"),
       reload_tle_id = ns("reload_tle"),
       orbit_width_id = ns("orbit_width"),
-      show_labels_id = ns("show_labels"),
       lighting_mode_id = ns("lighting_mode"),
       reference_mode_id = ns("reference_mode"),
       reference_note_id = ns("reference_note"),
@@ -224,23 +213,23 @@ satellite_row <- function(ns, key, label, color) {
     ),
     tags$td(tags$input(
       type = "checkbox",
-      id = ns(paste0("vis_", key, "_sat")),
-      checked = "checked"
+      id = ns(paste0("vis_", key, "_all"))
     )),
     tags$td(tags$input(
       type = "checkbox",
-      id = ns(paste0("vis_", key, "_orbit")),
-      checked = "checked"
+      id = ns(paste0("vis_", key, "_sat"))
     )),
     tags$td(tags$input(
       type = "checkbox",
-      id = ns(paste0("vis_", key, "_coverage")),
-      checked = "checked"
+      id = ns(paste0("vis_", key, "_orbit"))
     )),
     tags$td(tags$input(
       type = "checkbox",
-      id = ns(paste0("vis_", key, "_label")),
-      checked = "checked"
+      id = ns(paste0("vis_", key, "_coverage"))
+    )),
+    tags$td(tags$input(
+      type = "checkbox",
+      id = ns(paste0("vis_", key, "_label"))
     ))
   )
 }
@@ -456,17 +445,6 @@ satellite_globe_css <- function(root_id) {
       line-height: 1.35;
     }
 
-    #__ROOT_ID__ .sat-check {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      font-size: 12px;
-    }
-
-    #__ROOT_ID__ .sat-check input {
-      margin: 0;
-    }
-
     #__ROOT_ID__ .dot {
       width: 10px;
       height: 10px;
@@ -564,7 +542,6 @@ satellite_globe_js <- function(
     toggle_animation_id,
     reload_tle_id,
     orbit_width_id,
-    show_labels_id,
     lighting_mode_id,
     reference_mode_id,
     reference_note_id,
@@ -583,7 +560,6 @@ satellite_globe_js <- function(
       const TOGGLE_ANIMATION_ID = '__TOGGLE_ANIMATION_ID__';
       const RELOAD_TLE_ID = '__RELOAD_TLE_ID__';
       const ORBIT_WIDTH_ID = '__ORBIT_WIDTH_ID__';
-      const SHOW_LABELS_ID = '__SHOW_LABELS_ID__';
       const LIGHTING_MODE_ID = '__LIGHTING_MODE_ID__';
       const REFERENCE_MODE_ID = '__REFERENCE_MODE_ID__';
       const REFERENCE_NOTE_ID = '__REFERENCE_NOTE_ID__';
@@ -617,6 +593,9 @@ satellite_globe_js <- function(
 
       const earthRadiusScene = 2.0;
       const kmToScene = earthRadiusScene / EARTH_RADIUS_KM;
+
+      let currentReferenceAngle = THREE.MathUtils.degToRad(EARTH_OBLIQUITY_DEG);
+      let targetReferenceAngle = currentReferenceAngle;
 
       const tleURLs = [
         {
@@ -711,6 +690,7 @@ satellite_globe_js <- function(
         scene = new THREE.Scene();
 
         referenceGroup = new THREE.Group();
+        referenceGroup.rotation.x = currentReferenceAngle;
         scene.add(referenceGroup);
 
         const w = container.clientWidth || window.innerWidth;
@@ -800,11 +780,37 @@ satellite_globe_js <- function(
         }
 
         desiredSatellites.forEach(function(spec) {
-          ['sat', 'orbit', 'coverage', 'label'].forEach(function(elementName) {
+          const elementNames = ['sat', 'orbit', 'coverage', 'label'];
+          const allEl = byId(nsId('vis_' + spec.key + '_all'));
+
+          if (allEl) {
+            allEl.addEventListener('change', function() {
+              elementNames.forEach(function(elementName) {
+                const el = byId(nsId('vis_' + spec.key + '_' + elementName));
+
+                if (el) {
+                  el.checked = allEl.checked;
+                }
+              });
+
+              updateVisibility();
+              updateTable();
+              updateAllSatelliteLabels();
+            });
+          }
+
+          elementNames.forEach(function(elementName) {
             const el = byId(nsId('vis_' + spec.key + '_' + elementName));
 
             if (el) {
               el.addEventListener('change', function() {
+                if (allEl) {
+                  allEl.checked = elementNames.every(function(name) {
+                    const child = byId(nsId('vis_' + spec.key + '_' + name));
+                    return child ? child.checked : false;
+                  });
+                }
+
                 updateVisibility();
                 updateTable();
                 updateAllSatelliteLabels();
@@ -812,13 +818,6 @@ satellite_globe_js <- function(
             }
           });
         });
-
-        const showLabelsInput = byId(SHOW_LABELS_ID);
-        if (showLabelsInput) {
-          showLabelsInput.addEventListener('change', function() {
-            updateAllSatelliteLabels();
-          });
-        }
 
         const orbitWidthInput = byId(ORBIT_WIDTH_ID);
         if (orbitWidthInput) {
@@ -907,6 +906,7 @@ satellite_globe_js <- function(
           }
 
           updateVisibility();
+          updateTable();
           updateAllSatelliteLabels();
 
         } catch (err) {
@@ -1015,16 +1015,16 @@ satellite_globe_js <- function(
       }
 
       function addLights() {
-        ambientLight = new THREE.AmbientLight(0xffffff, 0.28);
+        ambientLight = new THREE.AmbientLight(0xffffff, 0.06);
         scene.add(ambientLight);
 
-        sunLight = new THREE.DirectionalLight(0xffffff, 1.75);
+        sunLight = new THREE.DirectionalLight(0xffffff, 2.15);
         sunLight.position.set(5, 3, 5);
         sunLight.target.position.set(0, 0, 0);
         scene.add(sunLight);
         scene.add(sunLight.target);
 
-        blueFillLight = new THREE.PointLight(0x60a5fa, 0.25, 30);
+        blueFillLight = new THREE.PointLight(0x60a5fa, 0.00, 30);
         blueFillLight.position.set(-5, -2, -4);
         scene.add(blueFillLight);
       }
@@ -1071,7 +1071,7 @@ satellite_globe_js <- function(
       function eciUnitToSceneVector(v) {
         return new THREE.Vector3(
           v.x,
-          v.z,
+          -v.z,
           -v.y
         ).normalize();
       }
@@ -1084,14 +1084,12 @@ satellite_globe_js <- function(
         const sunEci = getSunEciUnitVector(date);
         let sunScene = eciUnitToSceneVector(sunEci);
 
-        const referenceModeInput = byId(REFERENCE_MODE_ID);
-        const referenceMode = referenceModeInput ? referenceModeInput.value : 'equatorial';
-
-        if (referenceMode === 'tilted') {
+        if (Math.abs(currentReferenceAngle) > 0.00001) {
           const q = new THREE.Quaternion();
+
           q.setFromEuler(
             new THREE.Euler(
-              THREE.MathUtils.degToRad(-EARTH_OBLIQUITY_DEG),
+              currentReferenceAngle,
               0,
               0
             )
@@ -1110,7 +1108,7 @@ satellite_globe_js <- function(
         sunLight.target.updateMatrixWorld();
 
         const lightingModeInput = byId(LIGHTING_MODE_ID);
-        const lightingMode = lightingModeInput ? lightingModeInput.value : 'real_plus_fill';
+        const lightingMode = lightingModeInput ? lightingModeInput.value : 'real_only';
 
         if (lightingMode === 'real_only') {
           ambientLight.intensity = 0.06;
@@ -1129,25 +1127,40 @@ satellite_globe_js <- function(
         }
 
         const referenceModeInput = byId(REFERENCE_MODE_ID);
-        const referenceMode = referenceModeInput ? referenceModeInput.value : 'equatorial';
+        const referenceMode = referenceModeInput ? referenceModeInput.value : 'tilted';
         const referenceNote = byId(REFERENCE_NOTE_ID);
 
         if (referenceMode === 'tilted') {
-          referenceGroup.rotation.x = THREE.MathUtils.degToRad(EARTH_OBLIQUITY_DEG);
+          targetReferenceAngle = THREE.MathUtils.degToRad(EARTH_OBLIQUITY_DEG);
 
           if (referenceNote) {
             referenceNote.innerText =
-              'Referencia: inclinación terrestre real aproximada de 23.44° respecto del plano eclíptico. Útil para mostrar la relación Sol-Tierra y la estacionalidad.';
+              'Referencia: plano solar/eclíptico. La Tierra se muestra inclinada aproximadamente 23.44° respecto del plano de iluminación.';
           }
         } else {
-          referenceGroup.rotation.x = 0;
+          targetReferenceAngle = 0;
 
           if (referenceNote) {
             referenceNote.innerText =
-              'Referencia: ecuador como plano principal. Útil para análisis orbital, latitud, longitud y coberturas.';
+              'Referencia: plano ecuatorial terrestre. La Tierra se muestra derecha, útil para latitud, longitud, órbitas y coberturas.';
           }
         }
+      }
 
+      function updateReferenceTransition() {
+        if (!referenceGroup) {
+          return;
+        }
+
+        const diff = targetReferenceAngle - currentReferenceAngle;
+
+        if (Math.abs(diff) < 0.0001) {
+          currentReferenceAngle = targetReferenceAngle;
+        } else {
+          currentReferenceAngle += diff * 0.08;
+        }
+
+        referenceGroup.rotation.x = currentReferenceAngle;
         referenceGroup.updateMatrixWorld(true);
       }
 
@@ -1718,7 +1731,7 @@ satellite_globe_js <- function(
 
       function isElementVisible(sat, elementName) {
         const el = byId(nsId('vis_' + sat.key + '_' + elementName));
-        return el ? el.checked : true;
+        return el ? el.checked : false;
       }
 
       function updateSatellites(date) {
@@ -1834,12 +1847,9 @@ satellite_globe_js <- function(
       function updateSatelliteLabel(sat) {
         if (!sat.label) return;
 
-        const showLabelsInput = byId(SHOW_LABELS_ID);
-        const showGlobalLabels = showLabelsInput ? showLabelsInput.checked : true;
-
         const showThisLabel = isElementVisible(sat, 'label');
 
-        if (!showGlobalLabels || !showThisLabel) {
+        if (!showThisLabel) {
           sat.label.style.display = 'none';
           return;
         }
@@ -1972,6 +1982,7 @@ satellite_globe_js <- function(
         const now = new Date();
 
         updateClock(now);
+        updateReferenceTransition();
         updateSunLighting(now);
 
         if (animationRunning) {
@@ -2032,7 +2043,6 @@ satellite_globe_js <- function(
     "__TOGGLE_ANIMATION_ID__" = toggle_animation_id,
     "__RELOAD_TLE_ID__" = reload_tle_id,
     "__ORBIT_WIDTH_ID__" = orbit_width_id,
-    "__SHOW_LABELS_ID__" = show_labels_id,
     "__LIGHTING_MODE_ID__" = lighting_mode_id,
     "__REFERENCE_MODE_ID__" = reference_mode_id,
     "__REFERENCE_NOTE_ID__" = reference_note_id,

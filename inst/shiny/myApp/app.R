@@ -16,48 +16,48 @@ ui <- page_fillable(
   gap = 0,
   fillable_mobile = TRUE,
 
-  theme = bs_theme(
-    version = 5,
-    bg = "#0b1218",
-    fg = "#ffffff",
-    primary = "#00d4ff"
-  ),
+  # theme = bs_theme(
+  #   version = 5,
+  #   bg = "#0b1218",
+  #   fg = "#ffffff",
+  #   primary = "#00d4ff"
+  # ),
 
   shinyjs::useShinyjs(),
 
   tags$head(
-    tags$style(HTML("
-      html, body {
-        margin: 0 !important;
-        padding: 0 !important;
-        width: 100%;
-        height: 100%;
-        overflow: hidden;
-        background: #0b1218;
-      }
-
-      body > .container-fluid {
-        padding: 0 !important;
-        margin: 0 !important;
-        max-width: none !important;
-        width: 100% !important;
-      }
-
-      .bslib-page-fill {
-        padding: 0 !important;
-        margin: 0 !important;
-        gap: 0 !important;
-      }
-
-      .tab-content,
-      .tab-pane,
-      .nav-hidden-content {
-        padding: 0 !important;
-        margin: 0 !important;
-        width: 100%;
-        height: 100%;
-      }
-    ")),
+    # tags$style(HTML("
+    #   html, body {
+    #     margin: 0 !important;
+    #     padding: 0 !important;
+    #     width: 100%;
+    #     height: 100%;
+    #     overflow: hidden;
+    #     background: #0b1218;
+    #   }
+    #
+    #   body > .container-fluid {
+    #     padding: 0 !important;
+    #     margin: 0 !important;
+    #     max-width: none !important;
+    #     width: 100% !important;
+    #   }
+    #
+    #   .bslib-page-fill {
+    #     padding: 0 !important;
+    #     margin: 0 !important;
+    #     gap: 0 !important;
+    #   }
+    #
+    #   .tab-content,
+    #   .tab-pane,
+    #   .nav-hidden-content {
+    #     padding: 0 !important;
+    #     margin: 0 !important;
+    #     width: 100%;
+    #     height: 100%;
+    #   }
+    # ")),
 
     tags$link(rel = "icon", type = "image/png", href = paste0("logo.png?v=", Sys.time())),
     tags$link(rel = "shortcut icon", href = paste0("logo.png?v=", Sys.time())),
@@ -75,6 +75,10 @@ ui <- page_fillable(
     nav_panel_hidden(
       value = "page_engine",
       mod_satelliteGlobe_ui("sat01")
+    ),
+    nav_panel_hidden(
+      value = "page_glm",
+      mod_glm_ui("glm01")
     )
   )
 )
@@ -98,6 +102,8 @@ server <- function(input, output, session) {
 
   mod_satelliteGlobe_server("sat01")
 
+  mod_glm_server("glm01")
+
   # ---------------------------------------------------------------------------
   # Navegación: Launchpad -> Engine
   # ---------------------------------------------------------------------------
@@ -120,6 +126,10 @@ server <- function(input, output, session) {
       current_tab("page_engine")
     }
 
+    if (status$target_page == "glm") {
+      current_tab("page_glm")
+    }
+
   }, ignoreInit = TRUE)
 
   # ---------------------------------------------------------------------------
@@ -127,6 +137,11 @@ server <- function(input, output, session) {
   # ---------------------------------------------------------------------------
 
   observeEvent(input[["sat01-btn_go_home"]], {
+    current_tab("page_launchpad")
+  }, ignoreInit = TRUE)
+
+
+  observeEvent(input[["glm01-btn_go_home"]], {
     current_tab("page_launchpad")
   }, ignoreInit = TRUE)
 

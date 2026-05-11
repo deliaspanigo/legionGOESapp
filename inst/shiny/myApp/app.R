@@ -69,7 +69,8 @@ ui <- page_fillable(
 
     nav_panel_hidden(
       value = "page_launchpad",
-      mod_01_launchpad_ui("launchpad_v1")
+      #mod_01_launchpad_ui("launchpad_v1")
+      mod_launcher_02_ui("launchpad_v1")
     ),
 
     nav_panel_hidden(
@@ -114,8 +115,9 @@ server <- function(input, output, session) {
   # Módulos
   # ---------------------------------------------------------------------------
 
-  launchpad_res <- mod_01_launchpad_server("launchpad_v1")
-
+  #launchpad_res <- mod_01_launchpad_server("launchpad_v1")
+  launchpad_res <- mod_launcher_02_server("launchpad_v1")
+  #mod_launcher_02_ui
   mod_satelliteGlobe_server("sat01")
 
   mod_glm_server("glm01")

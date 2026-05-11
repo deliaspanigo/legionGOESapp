@@ -11,10 +11,10 @@ library(maps)
 library(bslib)
 
 # ============================================================
-# MÓDULO ÚNICO: MAPA + CAPAS + GOES GLM
+# MÓDULO ÚNICO: MAPA + CAPAS + GOES LSTF
 # ============================================================
 
-mod_glm_ui <- function(
+mod_lstf_ui <- function(
     id,
 
     base_menu_top = "80px",
@@ -23,19 +23,31 @@ mod_glm_ui <- function(
     overlay_menu_top = "400px",
     overlay_menu_left = "20px",
 
-    glm_menu_top = "20px",
-    glm_menu_right = "20px",
+    lstf_menu_top = "20px",
+    lstf_menu_right = "20px",
+
+    legend_top = "20px",
+    legend_left = "360px",
+
+    plot_top = "260px",
+    plot_right = "20px",
+
+    stats_top = "520px",
+    stats_right = "20px",
 
     home_button_left = "20px",
     home_button_bottom = "20px"
 ) {
   ns <- NS(id)
 
-  root_id <- ns("glm_module_root")
+  root_id <- ns("lstf_module_root")
   map_id <- ns("map")
   base_menu_id <- ns("base_menu")
   overlay_menu_id <- ns("overlay_menu")
-  glm_menu_id <- ns("glm_menu")
+  lstf_menu_id <- ns("lstf_menu")
+  legend_id <- ns("lstf_legend")
+  plot_id <- ns("lstf_plot_panel")
+  stats_id <- ns("lstf_stats_panel")
 
   tagList(
     useShinyjs(),
@@ -44,11 +56,6 @@ mod_glm_ui <- function(
       tags$script(src = "https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"),
 
       tags$style(HTML(sprintf("
-        /* ====================================================
-           CSS AUTOCONTENIDO DEL MÓDULO
-           Todo queda limitado a #%s
-        ==================================================== */
-
         #%s {
           position: fixed !important;
           inset: 0 !important;
@@ -66,7 +73,7 @@ mod_glm_ui <- function(
           box-sizing: border-box;
         }
 
-        #%s .glm-map-container {
+        #%s .lstf-map-container {
           position: fixed !important;
           inset: 0 !important;
           width: 100vw !important;
@@ -105,7 +112,8 @@ mod_glm_ui <- function(
           min-height: 100vh !important;
         }
 
-        #%s .floating-menu {
+        #%s .floating-menu,
+        #%s .floating-panel {
           position: absolute;
           width: 310px;
           background: white;
@@ -116,8 +124,12 @@ mod_glm_ui <- function(
           overflow: visible !important;
         }
 
+        #%s .floating-panel-wide {
+          width: 390px;
+        }
+
         #%s .floating-header {
-          background: #2c3e50;
+          background: #1e3a8a;
           color: white;
           padding: 10px 14px;
           font-weight: bold;
@@ -146,6 +158,21 @@ mod_glm_ui <- function(
           right: %s;
         }
 
+        #%s {
+          top: %s;
+          left: %s;
+        }
+
+        #%s {
+          top: %s;
+          right: %s;
+        }
+
+        #%s {
+          top: %s;
+          right: %s;
+        }
+
         #%s .status-box {
           font-size: 13px;
           line-height: 1.45;
@@ -153,13 +180,6 @@ mod_glm_ui <- function(
 
         #%s .status-value {
           font-weight: bold;
-        }
-
-        #%s .selectize-control,
-        #%s .selectize-input,
-        #%s .selectize-dropdown,
-        #%s .selectize-dropdown-content {
-          z-index: 10001 !important;
         }
 
         #%s .checkbox {
@@ -171,7 +191,7 @@ mod_glm_ui <- function(
           margin-bottom: 6px;
         }
 
-        #%s .glm-home-floating {
+        #%s .lstf-home-floating {
           position: absolute;
           left: %s;
           bottom: %s;
@@ -190,19 +210,58 @@ mod_glm_ui <- function(
           pointer-events: auto;
         }
 
-        #%s .glm-home-floating:hover {
+        #%s .lstf-home-floating:hover {
           background: rgba(234, 88, 12, 0.98);
           color: white;
+        }
+
+        #%s .legend-gradient {
+          width: 100%%;
+          height: 18px;
+          border-radius: 8px;
+          border: 1px solid rgba(0,0,0,0.25);
+          background: linear-gradient(to right,
+            #313695,
+            #4575b4,
+            #74add1,
+            #abd9e9,
+            #e0f3f8,
+            #ffffbf,
+            #fee090,
+            #fdae61,
+            #f46d43,
+            #d73027,
+            #a50026
+          );
+        }
+
+        #%s .legend-labels {
+          display: flex;
+          justify-content: space-between;
+          font-size: 11px;
+          margin-top: 4px;
+        }
+
+        #%s table {
+          width: 100%%;
+          font-size: 12px;
+        }
+
+        #%s table td,
+        #%s table th {
+          padding: 4px 6px;
         }
       ",
                               root_id,
                               root_id,
                               root_id,
+                              map_id,
+                              map_id,
+                              map_id,
+                              map_id,
+
                               root_id,
-                              map_id,
-                              map_id,
-                              map_id,
-                              map_id,
+                              root_id,
                               root_id,
                               root_id,
                               root_id,
@@ -215,15 +274,22 @@ mod_glm_ui <- function(
                               overlay_menu_top,
                               overlay_menu_left,
 
-                              glm_menu_id,
-                              glm_menu_top,
-                              glm_menu_right,
+                              lstf_menu_id,
+                              lstf_menu_top,
+                              lstf_menu_right,
 
-                              root_id,
-                              root_id,
-                              root_id,
-                              root_id,
-                              root_id,
+                              legend_id,
+                              legend_top,
+                              legend_left,
+
+                              plot_id,
+                              plot_top,
+                              plot_right,
+
+                              stats_id,
+                              stats_top,
+                              stats_right,
+
                               root_id,
                               root_id,
                               root_id,
@@ -232,41 +298,39 @@ mod_glm_ui <- function(
                               root_id,
                               home_button_left,
                               home_button_bottom,
+                              root_id,
+
+                              root_id,
+                              root_id,
+                              root_id,
+                              root_id,
                               root_id
       ))),
 
       tags$script(HTML(sprintf("
         $(document).on('shiny:connected', function() {
-          $('#%s').draggable({
-            handle: '#%s',
-            containment: 'window',
-            scroll: false
-          });
-
-          $('#%s').draggable({
-            handle: '#%s',
-            containment: 'window',
-            scroll: false
-          });
-
-          $('#%s').draggable({
-            handle: '#%s',
-            containment: 'window',
-            scroll: false
-          });
+          $('#%s').draggable({ handle: '#%s', containment: 'window', scroll: false });
+          $('#%s').draggable({ handle: '#%s', containment: 'window', scroll: false });
+          $('#%s').draggable({ handle: '#%s', containment: 'window', scroll: false });
+          $('#%s').draggable({ handle: '#%s', containment: 'window', scroll: false });
+          $('#%s').draggable({ handle: '#%s', containment: 'window', scroll: false });
+          $('#%s').draggable({ handle: '#%s', containment: 'window', scroll: false });
         });
       ",
                                ns("base_menu"), ns("base_menu_header"),
                                ns("overlay_menu"), ns("overlay_menu_header"),
-                               ns("glm_menu"), ns("glm_menu_header")
+                               ns("lstf_menu"), ns("lstf_menu_header"),
+                               ns("lstf_legend"), ns("lstf_legend_header"),
+                               ns("lstf_plot_panel"), ns("lstf_plot_header"),
+                               ns("lstf_stats_panel"), ns("lstf_stats_header")
       )))
     ),
 
     div(
-      id = ns("glm_module_root"),
+      id = ns("lstf_module_root"),
 
       div(
-        class = "glm-map-container",
+        class = "lstf-map-container",
         leafletOutput(
           outputId = ns("map"),
           width = "100vw",
@@ -277,7 +341,7 @@ mod_glm_ui <- function(
       actionButton(
         inputId = ns("btn_go_home"),
         label = "← Launcher",
-        class = "glm-home-floating"
+        class = "lstf-home-floating"
       ),
 
       # ========================================================
@@ -349,62 +413,135 @@ mod_glm_ui <- function(
       ),
 
       # ========================================================
-      # MENÚ 3: GLM
+      # MENÚ 3: LSTF
       # ========================================================
 
       div(
-        id = ns("glm_menu"),
+        id = ns("lstf_menu"),
         class = "floating-menu",
 
         div(
-          id = ns("glm_menu_header"),
+          id = ns("lstf_menu_header"),
           class = "floating-header",
-          "Estado GOES GLM"
+          "Estado GOES LSTF"
         ),
 
         div(
           class = "floating-body status-box",
 
           actionButton(
-            inputId = ns("start_glm"),
-            label = "Iniciar descarga GLM",
+            inputId = ns("start_lstf"),
+            label = "Iniciar descarga LSTF",
             width = "100%"
           ),
 
           actionButton(
-            inputId = ns("pause_glm"),
-            label = "Pausar descarga GLM",
+            inputId = ns("pause_lstf"),
+            label = "Pausar descarga LSTF",
             width = "100%"
           ),
 
           actionButton(
-            inputId = ns("clear_glm"),
-            label = "Borrar acumulado",
+            inputId = ns("clear_lstf"),
+            label = "Borrar capa",
             width = "100%"
           ),
 
           hr(),
 
+          sliderInput(
+            inputId = ns("sample_stride"),
+            label = "Muestreo de píxeles:",
+            min = 4,
+            max = 40,
+            value = 16,
+            step = 2
+          ),
+
+          checkboxInput(
+            inputId = ns("dqf_good_only"),
+            label = "Usar solo DQF = 0",
+            value = TRUE
+          ),
+
+          hr(),
+
+          div("Estado: ", span(textOutput(ns("lstf_status"), inline = TRUE), class = "status-value")),
+          div("Última búsqueda: ", span(textOutput(ns("lstf_last_check"), inline = TRUE), class = "status-value")),
+          div("Último archivo: ", span(textOutput(ns("lstf_last_file"), inline = TRUE), class = "status-value")),
+          div("Píxeles mostrados: ", span(textOutput(ns("lstf_pixel_count"), inline = TRUE), class = "status-value"))
+        )
+      ),
+
+      # ========================================================
+      # ESCALA MOVIBLE
+      # ========================================================
+
+      div(
+        id = ns("lstf_legend"),
+        class = "floating-panel",
+
+        div(
+          id = ns("lstf_legend_header"),
+          class = "floating-header",
+          "Escala LST °C"
+        ),
+
+        div(
+          class = "floating-body",
+          div(class = "legend-gradient"),
           div(
-            "Estado: ",
-            span(textOutput(ns("glm_status"), inline = TRUE), class = "status-value")
+            class = "legend-labels",
+            span("-60"),
+            span("-30"),
+            span("0"),
+            span("30"),
+            span("60")
           ),
           div(
-            "Última búsqueda: ",
-            span(textOutput(ns("glm_last_check"), inline = TRUE), class = "status-value")
-          ),
-          div(
-            "Último archivo: ",
-            span(textOutput(ns("glm_last_file"), inline = TRUE), class = "status-value")
-          ),
-          div(
-            "Archivos descargados: ",
-            span(textOutput(ns("glm_files_count"), inline = TRUE), class = "status-value")
-          ),
-          div(
-            "Rayos acumulados: ",
-            span(textOutput(ns("glm_flash_count"), inline = TRUE), class = "status-value")
+            style = "font-size: 12px; margin-top: 8px;",
+            "Temperatura de superficie terrestre convertida a °C."
           )
+        )
+      ),
+
+      # ========================================================
+      # GRÁFICO MOVIBLE
+      # ========================================================
+
+      div(
+        id = ns("lstf_plot_panel"),
+        class = "floating-panel floating-panel-wide",
+
+        div(
+          id = ns("lstf_plot_header"),
+          class = "floating-header",
+          "Histograma LST °C"
+        ),
+
+        div(
+          class = "floating-body",
+          plotOutput(ns("lstf_hist"), height = "220px")
+        )
+      ),
+
+      # ========================================================
+      # TABLA ESTADÍSTICA MOVIBLE
+      # ========================================================
+
+      div(
+        id = ns("lstf_stats_panel"),
+        class = "floating-panel floating-panel-wide",
+
+        div(
+          id = ns("lstf_stats_header"),
+          class = "floating-header",
+          "Estadísticas LST °C"
+        ),
+
+        div(
+          class = "floating-body",
+          tableOutput(ns("lstf_stats_table"))
         )
       )
     )
@@ -412,12 +549,12 @@ mod_glm_ui <- function(
 }
 
 
-mod_glm_server <- function(
+mod_lstf_server <- function(
     id,
     satellite = "goes19",
-    product = "GLM-L2-LCFA",
-    interval_ms = 20000,
-    n_files = 3,
+    product = "ABI-L2-LSTF",
+    interval_ms = 600000,
+    n_files = 1,
     initial_lng = -75,
     initial_lat = 5,
     initial_zoom = 3
@@ -425,54 +562,139 @@ mod_glm_server <- function(
   moduleServer(id, function(input, output, session) {
 
     # ========================================================
-    # FUNCIONES INTERNAS DEL MÓDULO
+    # FUNCIONES INTERNAS
     # ========================================================
 
-    get_latest_glm_files <- function(
-    satellite = "goes19",
-    product = "GLM-L2-LCFA",
-    n_files = 3
-    ) {
+    get_goes_prefixes <- function(product) {
       now_utc <- as.POSIXct(Sys.time(), tz = "UTC")
 
-      year <- format(now_utc, "%Y", tz = "UTC")
-      doy  <- format(now_utc, "%j", tz = "UTC")
-      hour <- format(now_utc, "%H", tz = "UTC")
-
-      bucket_url <- paste0("https://noaa-", satellite, ".s3.amazonaws.com/")
-      prefix <- paste0(product, "/", year, "/", doy, "/", hour, "/")
-
-      url <- paste0(
-        bucket_url,
-        "?list-type=2&prefix=", prefix
+      times <- c(
+        now_utc,
+        now_utc - 3600,
+        now_utc - 7200
       )
 
-      res <- httr::GET(url, httr::timeout(15))
+      unique(vapply(times, function(t) {
+        year <- format(t, "%Y", tz = "UTC")
+        doy  <- format(t, "%j", tz = "UTC")
+        hour <- format(t, "%H", tz = "UTC")
+        paste0(product, "/", year, "/", doy, "/", hour, "/")
+      }, character(1)))
+    }
 
-      if (httr::status_code(res) != 200) {
+
+    get_latest_lstf_files <- function(
+    satellite = "goes19",
+    product = "ABI-L2-LSTF",
+    n_files = 1
+    ) {
+      bucket_url <- paste0("https://noaa-", satellite, ".s3.amazonaws.com/")
+      prefixes <- get_goes_prefixes(product)
+
+      all_keys <- character(0)
+
+      for (prefix in prefixes) {
+        url <- paste0(bucket_url, "?list-type=2&prefix=", prefix)
+
+        res <- tryCatch({
+          httr::GET(url, httr::timeout(15))
+        }, error = function(e) {
+          NULL
+        })
+
+        if (is.null(res) || httr::status_code(res) != 200) {
+          next
+        }
+
+        xml_txt <- httr::content(res, as = "text", encoding = "UTF-8")
+        doc <- xml2::read_xml(xml_txt)
+
+        ns_xml <- xml2::xml_ns(doc)
+        keys <- xml2::xml_text(xml2::xml_find_all(doc, ".//d1:Key", ns = ns_xml))
+        keys <- keys[grepl("\\.nc$", keys)]
+
+        all_keys <- c(all_keys, keys)
+      }
+
+      if (length(all_keys) == 0) {
         return(character(0))
       }
 
-      xml_txt <- httr::content(res, as = "text", encoding = "UTF-8")
-      doc <- xml2::read_xml(xml_txt)
-
-      ns_xml <- xml2::xml_ns(doc)
-      keys <- xml2::xml_text(xml2::xml_find_all(doc, ".//d1:Key", ns = ns_xml))
-
-      keys <- keys[grepl("\\.nc$", keys)]
-
-      if (length(keys) == 0) {
-        return(character(0))
-      }
-
-      keys <- sort(keys)
-      latest_keys <- tail(keys, n_files)
+      all_keys <- sort(unique(all_keys))
+      latest_keys <- tail(all_keys, n_files)
 
       paste0(bucket_url, latest_keys)
     }
 
 
-    read_glm_flashes <- function(url) {
+    fixed_grid_to_lonlat <- function(x, y, proj_attrs) {
+      req <- as.numeric(proj_attrs$semi_major_axis)
+      rpol <- as.numeric(proj_attrs$semi_minor_axis)
+      h <- as.numeric(proj_attrs$perspective_point_height)
+      lon0 <- as.numeric(proj_attrs$longitude_of_projection_origin) * pi / 180
+
+      H <- h + req
+
+      x_rad <- as.numeric(x)
+      y_rad <- as.numeric(y)
+
+      a <- sin(x_rad)^2 +
+        cos(x_rad)^2 *
+        (cos(y_rad)^2 + (req^2 / rpol^2) * sin(y_rad)^2)
+
+      b <- -2 * H * cos(x_rad) * cos(y_rad)
+      c <- H^2 - req^2
+
+      disc <- b^2 - 4 * a * c
+
+      lon <- rep(NA_real_, length(x_rad))
+      lat <- rep(NA_real_, length(x_rad))
+
+      ok <- is.finite(disc) & disc >= 0
+
+      if (any(ok)) {
+        rs <- (-b[ok] - sqrt(disc[ok])) / (2 * a[ok])
+
+        sx <- rs * cos(x_rad[ok]) * cos(y_rad[ok])
+        sy <- -rs * sin(x_rad[ok])
+        sz <- rs * cos(x_rad[ok]) * sin(y_rad[ok])
+
+        lat[ok] <- atan(
+          (req^2 / rpol^2) *
+            (sz / sqrt((H - sx)^2 + sy^2))
+        ) * 180 / pi
+
+        lon[ok] <- (lon0 - atan(sy / (H - sx))) * 180 / pi
+      }
+
+      data.frame(
+        lon = lon,
+        lat = lat
+      )
+    }
+
+
+    lst_color <- function(temp_c) {
+      pal <- colorRampPalette(c(
+        "#313695",
+        "#4575b4",
+        "#74add1",
+        "#abd9e9",
+        "#e0f3f8",
+        "#ffffbf",
+        "#fee090",
+        "#fdae61",
+        "#f46d43",
+        "#d73027",
+        "#a50026"
+      ))(121)
+
+      idx <- round(pmax(-60, pmin(60, temp_c)) + 61)
+      pal[idx]
+    }
+
+
+    read_lstf <- function(url, stride = 16, good_only = TRUE) {
       temp_file <- tempfile(fileext = ".nc")
 
       ok <- tryCatch({
@@ -488,7 +710,7 @@ mod_glm_server <- function(
       })
 
       if (!ok || !file.exists(temp_file)) {
-        return(data.frame())
+        return(list(points = data.frame(), values = numeric(0)))
       }
 
       nc <- tryCatch({
@@ -498,7 +720,7 @@ mod_glm_server <- function(
       })
 
       if (is.null(nc)) {
-        return(data.frame())
+        return(list(points = data.frame(), values = numeric(0)))
       }
 
       on.exit({
@@ -508,37 +730,82 @@ mod_glm_server <- function(
 
       vars <- names(nc$var)
 
-      if (!all(c("flash_lat", "flash_lon") %in% vars)) {
-        return(data.frame())
+      if (!all(c("LST", "x", "y", "goes_imager_projection") %in% vars)) {
+        return(list(points = data.frame(), values = numeric(0)))
       }
 
-      lat <- ncdf4::ncvar_get(nc, "flash_lat")
-      lon <- ncdf4::ncvar_get(nc, "flash_lon")
+      lst_k <- ncdf4::ncvar_get(nc, "LST")
+      x <- ncdf4::ncvar_get(nc, "x")
+      y <- ncdf4::ncvar_get(nc, "y")
 
-      flash_energy <- if ("flash_energy" %in% vars) {
-        ncdf4::ncvar_get(nc, "flash_energy")
+      dqf <- NULL
+      if ("DQF" %in% vars) {
+        dqf <- ncdf4::ncvar_get(nc, "DQF")
+      }
+
+      lst_c <- as.numeric(lst_k) - 273.15
+      lst_c_mat <- matrix(lst_c, nrow = dim(lst_k)[1], ncol = dim(lst_k)[2])
+
+      if (!is.null(dqf) && isTRUE(good_only)) {
+        dqf_vec <- as.numeric(dqf)
+        lst_c_mat[dqf_vec != 0] <- NA_real_
+      }
+
+      valid_values <- as.numeric(lst_c_mat)
+      valid_values <- valid_values[is.finite(valid_values)]
+
+      dims <- dim(lst_c_mat)
+
+      idx1 <- seq(1, dims[1], by = stride)
+      idx2 <- seq(1, dims[2], by = stride)
+
+      grid <- expand.grid(i = idx1, j = idx2)
+
+      vals <- lst_c_mat[cbind(grid$i, grid$j)]
+
+      keep <- is.finite(vals) & vals >= -80 & vals <= 80
+
+      grid <- grid[keep, , drop = FALSE]
+      vals <- vals[keep]
+
+      if (nrow(grid) == 0) {
+        return(list(points = data.frame(), values = valid_values))
+      }
+
+      # Detectar orientación de matriz
+      if (dims[1] == length(x) && dims[2] == length(y)) {
+        x_sel <- x[grid$i]
+        y_sel <- y[grid$j]
+      } else if (dims[1] == length(y) && dims[2] == length(x)) {
+        y_sel <- y[grid$i]
+        x_sel <- x[grid$j]
       } else {
-        rep(NA_real_, length(lat))
+        return(list(points = data.frame(), values = valid_values))
       }
 
-      flash_area <- if ("flash_area" %in% vars) {
-        ncdf4::ncvar_get(nc, "flash_area")
-      } else {
-        rep(NA_real_, length(lat))
-      }
+      proj_attrs <- nc$var[["goes_imager_projection"]]$att
+
+      lonlat <- fixed_grid_to_lonlat(
+        x = x_sel,
+        y = y_sel,
+        proj_attrs = proj_attrs
+      )
 
       df <- data.frame(
-        lon = as.numeric(lon),
-        lat = as.numeric(lat),
-        energy = as.numeric(flash_energy),
-        area = as.numeric(flash_area),
+        lon = lonlat$lon,
+        lat = lonlat$lat,
+        lst_c = vals,
+        color = lst_color(vals),
         file = basename(url),
         downloaded_at = format(Sys.time(), "%Y-%m-%d %H:%M:%S")
       )
 
       df <- df[is.finite(df$lon) & is.finite(df$lat), ]
 
-      df
+      list(
+        points = df,
+        values = valid_values
+      )
     }
 
 
@@ -602,18 +869,18 @@ mod_glm_server <- function(
 
 
     # ========================================================
-    # DATOS Y ESTADOS REACTIVOS
+    # ESTADOS
     # ========================================================
 
     geo <- load_geo_layers()
 
-    downloaded_files <- reactiveVal(character(0))
-    glm_data <- reactiveVal(data.frame())
-    glm_running <- reactiveVal(FALSE)
+    lstf_points <- reactiveVal(data.frame())
+    lstf_values <- reactiveVal(numeric(0))
+    lstf_running <- reactiveVal(FALSE)
 
-    glm_status <- reactiveVal("Detenido. Presione iniciar.")
-    glm_last_check <- reactiveVal("-")
-    glm_last_file <- reactiveVal("-")
+    lstf_status <- reactiveVal("Detenido. Presione iniciar.")
+    lstf_last_check <- reactiveVal("-")
+    lstf_last_file <- reactiveVal("-")
 
 
     # ========================================================
@@ -757,16 +1024,16 @@ mod_glm_server <- function(
 
 
     # ========================================================
-    # GLM
+    # LSTF
     # ========================================================
 
-    download_glm_step <- function() {
+    download_lstf_step <- function() {
 
-      glm_status("Buscando imágenes GLM...")
-      glm_last_check(format(Sys.time(), "%Y-%m-%d %H:%M:%S"))
+      lstf_status("Buscando imágenes LSTF...")
+      lstf_last_check(format(Sys.time(), "%Y-%m-%d %H:%M:%S"))
 
       latest_urls <- tryCatch({
-        get_latest_glm_files(
+        get_latest_lstf_files(
           satellite = satellite,
           product = product,
           n_files = n_files
@@ -776,95 +1043,87 @@ mod_glm_server <- function(
       })
 
       if (length(latest_urls) == 0) {
-        glm_status("Sin archivos encontrados")
+        lstf_status("Sin archivos LSTF encontrados")
         return()
       }
 
-      old_files <- downloaded_files()
-      new_urls <- latest_urls[!basename(latest_urls) %in% old_files]
+      url <- tail(latest_urls, 1)
 
-      if (length(new_urls) == 0) {
-        glm_status("Sin archivos nuevos")
-        return()
-      }
+      lstf_status(paste("Descargando:", basename(url)))
+      lstf_last_file(basename(url))
 
-      all_new_data <- list()
+      res <- tryCatch({
+        read_lstf(
+          url = url,
+          stride = input$sample_stride,
+          good_only = input$dqf_good_only
+        )
+      }, error = function(e) {
+        list(points = data.frame(), values = numeric(0))
+      })
 
-      for (url in new_urls) {
-        glm_status(paste("Descargando:", basename(url)))
-        glm_last_file(basename(url))
+      lstf_points(res$points)
+      lstf_values(res$values)
 
-        df <- tryCatch({
-          read_glm_flashes(url)
-        }, error = function(e) {
-          data.frame()
-        })
-
-        if (nrow(df) > 0) {
-          all_new_data[[length(all_new_data) + 1]] <- df
-        }
-      }
-
-      downloaded_files(unique(c(old_files, basename(new_urls))))
-
-      if (length(all_new_data) > 0) {
-        new_df <- bind_rows(all_new_data)
-        current_df <- glm_data()
-
-        if (nrow(current_df) == 0) {
-          total_df <- new_df
-        } else {
-          total_df <- bind_rows(current_df, new_df)
-        }
-
-        glm_data(total_df)
-        glm_status("GLM actualizado")
+      if (nrow(res$points) > 0) {
+        lstf_status("LSTF actualizado")
       } else {
-        glm_status("Archivos descargados, sin flashes")
+        lstf_status("Archivo descargado, sin píxeles válidos")
       }
     }
 
 
-    observeEvent(input$start_glm, {
-      glm_running(TRUE)
-      glm_status("GLM iniciado. Buscando archivos...")
-      download_glm_step()
+    observeEvent(input$start_lstf, {
+      lstf_running(TRUE)
+      lstf_status("LSTF iniciado. Buscando archivos...")
+      download_lstf_step()
     })
 
 
-    observeEvent(input$pause_glm, {
-      glm_running(FALSE)
-      glm_status("Pausado")
+    observeEvent(input$pause_lstf, {
+      lstf_running(FALSE)
+      lstf_status("Pausado")
     })
 
 
-    observeEvent(input$clear_glm, {
-      glm_data(data.frame())
-      downloaded_files(character(0))
-      glm_status("Acumulado borrado")
-      glm_last_file("-")
+    observeEvent(input$clear_lstf, {
+      lstf_points(data.frame())
+      lstf_values(numeric(0))
+      lstf_status("Capa borrada")
+      lstf_last_file("-")
 
       leafletProxy("map") %>%
-        clearGroup("Rayos GLM")
+        clearGroup("LSTF")
     })
+
+
+    observeEvent(
+      list(input$sample_stride, input$dqf_good_only),
+      {
+        if (isTRUE(lstf_running())) {
+          download_lstf_step()
+        }
+      },
+      ignoreInit = TRUE
+    )
 
 
     observe({
       invalidateLater(interval_ms, session)
 
-      if (!isTRUE(glm_running())) {
+      if (!isTRUE(lstf_running())) {
         return()
       }
 
-      download_glm_step()
+      download_lstf_step()
     })
 
 
     observe({
-      df <- glm_data()
+      df <- lstf_points()
 
       proxy <- leafletProxy("map") %>%
-        clearGroup("Rayos GLM")
+        clearGroup("LSTF")
 
       if (nrow(df) == 0) {
         return()
@@ -875,19 +1134,16 @@ mod_glm_server <- function(
           data = df,
           lng = ~lon,
           lat = ~lat,
-          group = "Rayos GLM",
-          radius = 4,
-          stroke = TRUE,
-          weight = 1,
-          color = "yellow",
-          fillColor = "red",
-          fillOpacity = 0.8,
-          opacity = 1,
+          group = "LSTF",
+          radius = 2.2,
+          stroke = FALSE,
+          fillColor = ~color,
+          fillOpacity = 0.75,
           popup = ~paste0(
-            "<b>GLM Flash</b><br>",
+            "<b>GOES LSTF</b><br>",
+            "LST: ", round(lst_c, 2), " °C<br>",
             "Lat: ", round(lat, 3), "<br>",
             "Lon: ", round(lon, 3), "<br>",
-            "Energía: ", signif(energy, 3), "<br>",
             "Archivo: ", file, "<br>",
             "Descargado: ", downloaded_at
           )
@@ -896,51 +1152,137 @@ mod_glm_server <- function(
 
 
     # ========================================================
-    # TEXTOS DEL MENÚ GLM
+    # GRÁFICO
     # ========================================================
 
-    output$glm_status <- renderText({
-      glm_status()
+    output$lstf_hist <- renderPlot({
+      vals <- lstf_values()
+
+      if (length(vals) == 0) {
+        plot.new()
+        text(0.5, 0.5, "Sin datos LSTF")
+        return()
+      }
+
+      vals <- vals[is.finite(vals)]
+      vals <- vals[vals >= -80 & vals <= 80]
+
+      hist(
+        vals,
+        breaks = seq(-60, 60, by = 5),
+        main = "Distribución LST",
+        xlab = "Temperatura superficial (°C)",
+        ylab = "Frecuencia",
+        col = "gray70",
+        border = "white",
+        xlim = c(-60, 60)
+      )
+
+      abline(v = mean(vals, na.rm = TRUE), lwd = 2)
+      abline(v = median(vals, na.rm = TRUE), lwd = 2, lty = 2)
+      legend(
+        "topright",
+        legend = c("Media", "Mediana"),
+        lwd = 2,
+        lty = c(1, 2),
+        bty = "n",
+        cex = 0.8
+      )
     })
 
-    output$glm_last_check <- renderText({
-      glm_last_check()
+
+    # ========================================================
+    # TABLA ESTADÍSTICA
+    # ========================================================
+
+    output$lstf_stats_table <- renderTable({
+      vals <- lstf_values()
+      vals <- vals[is.finite(vals)]
+      vals <- vals[vals >= -80 & vals <= 80]
+
+      if (length(vals) == 0) {
+        return(data.frame(
+          Estadistica = "Sin datos",
+          Valor = NA
+        ))
+      }
+
+      data.frame(
+        Estadistica = c(
+          "n píxeles válidos",
+          "mínimo °C",
+          "p25 °C",
+          "media °C",
+          "mediana °C",
+          "p75 °C",
+          "máximo °C",
+          "desvío estándar °C"
+        ),
+        Valor = c(
+          length(vals),
+          round(min(vals), 2),
+          round(quantile(vals, 0.25), 2),
+          round(mean(vals), 2),
+          round(median(vals), 2),
+          round(quantile(vals, 0.75), 2),
+          round(max(vals), 2),
+          round(sd(vals), 2)
+        )
+      )
     })
 
-    output$glm_last_file <- renderText({
-      glm_last_file()
+
+    # ========================================================
+    # TEXTOS DEL MENÚ LSTF
+    # ========================================================
+
+    output$lstf_status <- renderText({
+      lstf_status()
     })
 
-    output$glm_files_count <- renderText({
-      length(downloaded_files())
+    output$lstf_last_check <- renderText({
+      lstf_last_check()
     })
 
-    output$glm_flash_count <- renderText({
-      nrow(glm_data())
+    output$lstf_last_file <- renderText({
+      lstf_last_file()
+    })
+
+    output$lstf_pixel_count <- renderText({
+      nrow(lstf_points())
     })
   })
 }
 
 
 # ============================================================
-# APP PRINCIPAL DE PRUEBA GLM
+# APP PRINCIPAL DE PRUEBA LSTF
 # ============================================================
 #
 # ui <- fluidPage(
-#   theme = bs_theme(version = 5, bootswatch = "flatly", primary = "#00d4ff"),
+#   theme = bs_theme(version = 5, bootswatch = "flatly", primary = "#2563eb"),
 #   style = "padding: 0; margin: 0;",
 #
-#   mod_glm_ui(
-#     "glm01",
+#   mod_lstf_ui(
+#     "lstf01",
 #
-#     base_menu_top = "20px",
+#     base_menu_top = "80px",
 #     base_menu_left = "20px",
 #
-#     overlay_menu_top = "20px",
-#     overlay_menu_left = "350px",
+#     overlay_menu_top = "400px",
+#     overlay_menu_left = "20px",
 #
-#     glm_menu_top = "20px",
-#     glm_menu_right = "20px",
+#     lstf_menu_top = "20px",
+#     lstf_menu_right = "20px",
+#
+#     legend_top = "20px",
+#     legend_left = "360px",
+#
+#     plot_top = "260px",
+#     plot_right = "20px",
+#
+#     stats_top = "520px",
+#     stats_right = "20px",
 #
 #     home_button_left = "20px",
 #     home_button_bottom = "20px"
@@ -949,20 +1291,19 @@ mod_glm_server <- function(
 #
 # server <- function(input, output, session) {
 #
-#   mod_glm_server(
-#     id = "glm01",
+#   mod_lstf_server(
+#     id = "lstf01",
 #     satellite = "goes19",
-#     product = "GLM-L2-LCFA",
-#     interval_ms = 20000,
-#     n_files = 3,
+#     product = "ABI-L2-LSTF",
+#     interval_ms = 600000,
+#     n_files = 1,
 #
-#     # Vista inicial: continente americano completo
 #     initial_lng = -75,
 #     initial_lat = 5,
 #     initial_zoom = 3
 #   )
 #
-#   observeEvent(input[["glm01-btn_go_home"]], {
+#   observeEvent(input[["lstf01-btn_go_home"]], {
 #     showNotification("Botón ← Launcher presionado", type = "message")
 #   }, ignoreInit = TRUE)
 # }

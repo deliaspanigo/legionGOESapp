@@ -79,6 +79,22 @@ ui <- page_fillable(
     nav_panel_hidden(
       value = "page_glm",
       mod_glm_ui("glm01")
+    ),
+    nav_panel_hidden(
+      value = "page_fdcf",
+      mod_fdcf_ui("fdcf01")
+    ),
+    nav_panel_hidden(
+      value = "page_lstf",
+      mod_lstf_ui("lstf01")
+    ),
+    nav_panel_hidden(
+      value = "page_lstf_new",
+      mod_lstf_new_ui("lstf_new")
+    ),
+    nav_panel_hidden(
+      value = "page_fdcf_new",
+      mod_fdcf_new_ui("fdcf_new")
     )
   )
 )
@@ -103,6 +119,12 @@ server <- function(input, output, session) {
   mod_satelliteGlobe_server("sat01")
 
   mod_glm_server("glm01")
+
+  mod_fdcf_server("fdcf01")
+
+  mod_lstf_server("lstf01")
+  mod_lstf_new_server("lstf_new")
+  mod_fdcf_new_server("fdcf_new")
 
   # ---------------------------------------------------------------------------
   # Navegación: Launchpad -> Engine
@@ -129,7 +151,18 @@ server <- function(input, output, session) {
     if (status$target_page == "glm") {
       current_tab("page_glm")
     }
-
+    if (status$target_page == "fdcf") {
+      current_tab("page_fdcf")
+    }
+    if (status$target_page == "lstf") {
+      current_tab("page_lstf")
+    }
+    if (status$target_page == "lstf_new") {
+      current_tab("page_lstf_new")
+    }
+    if (status$target_page == "fdcf_new") {
+      current_tab("page_fdcf_new")
+    }
   }, ignoreInit = TRUE)
 
   # ---------------------------------------------------------------------------
@@ -145,6 +178,21 @@ server <- function(input, output, session) {
     current_tab("page_launchpad")
   }, ignoreInit = TRUE)
 
+  observeEvent(input[["fdcf01-btn_go_home"]], {
+    current_tab("page_launchpad")
+  }, ignoreInit = TRUE)
+
+  observeEvent(input[["lstf01-btn_go_home"]], {
+    current_tab("page_launchpad")
+  }, ignoreInit = TRUE)
+
+  observeEvent(input[["lstf_new-btn_go_home"]], {
+    current_tab("page_launchpad")
+  }, ignoreInit = TRUE)
+
+  observeEvent(input[["fdcf_new-btn_go_home"]], {
+    current_tab("page_launchpad")
+  }, ignoreInit = TRUE)
   # ---------------------------------------------------------------------------
   # Único lugar donde realmente se cambia el navset
   # ---------------------------------------------------------------------------

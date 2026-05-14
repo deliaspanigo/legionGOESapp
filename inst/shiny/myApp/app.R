@@ -1,135 +1,212 @@
 # ==============================================================================
-# ORQUESTADOR RSCIENCE 2027 - BSLIB + LOGO FIX
+# ORQUESTADOR RSCIENCE 2027 - SIN navset_hidden - FULLSCREEN ESTABLE
 # ==============================================================================
+
 library(shiny)
 library(bslib)
 library(shinyjs)
 
-# Nota: Al estar ejecutando desde la carpeta local,
-# devtools::load_all("../../../") cargará tu paquete legionGOESapp
 devtools::load_all()
 
-# UI - page_fillable
+# ==============================================================================
+# UI
+# ==============================================================================
+
 ui <- page_fillable(
   title = "LegionGoes - GIS Analysis",
   padding = 0,
   gap = 0,
   fillable_mobile = TRUE,
 
-  # theme = bs_theme(
-  #   version = 5,
-  #   bg = "#0b1218",
-  #   fg = "#ffffff",
-  #   primary = "#00d4ff"
-  # ),
-
   shinyjs::useShinyjs(),
 
   tags$head(
-    # tags$style(HTML("
-    #   html, body {
-    #     margin: 0 !important;
-    #     padding: 0 !important;
-    #     width: 100%;
-    #     height: 100%;
-    #     overflow: hidden;
-    #     background: #0b1218;
-    #   }
-    #
-    #   body > .container-fluid {
-    #     padding: 0 !important;
-    #     margin: 0 !important;
-    #     max-width: none !important;
-    #     width: 100% !important;
-    #   }
-    #
-    #   .bslib-page-fill {
-    #     padding: 0 !important;
-    #     margin: 0 !important;
-    #     gap: 0 !important;
-    #   }
-    #
-    #   .tab-content,
-    #   .tab-pane,
-    #   .nav-hidden-content {
-    #     padding: 0 !important;
-    #     margin: 0 !important;
-    #     width: 100%;
-    #     height: 100%;
-    #   }
-    # ")),
+    tags$style(HTML("
+      html,
+      body {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        overflow: hidden !important;
+        background: #0b1218 !important;
+      }
 
-    tags$link(rel = "icon", type = "image/png", href = paste0("logo.png?v=", Sys.time())),
-    tags$link(rel = "shortcut icon", href = paste0("logo.png?v=", Sys.time())),
-    tags$link(rel = "apple-touch-icon", href = paste0("logo.png?v=", Sys.time()))
+      body > .bslib-page-fill,
+      .bslib-page-fill {
+        width: 100vw !important;
+        height: 100vh !important;
+        min-height: 100vh !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        gap: 0 !important;
+        overflow: hidden !important;
+      }
+
+      #app_pages {
+        position: relative !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        min-height: 100vh !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: hidden !important;
+        background: #0b1218 !important;
+      }
+
+      .app-page {
+        position: absolute !important;
+        inset: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        min-height: 100vh !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: hidden !important;
+
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        z-index: 0 !important;
+      }
+
+      .app-page.active {
+        visibility: visible !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        z-index: 10 !important;
+      }
+
+      .app-page > * {
+        width: 100% !important;
+        height: 100% !important;
+      }
+
+      .app-page .earth3d-module-root {
+        width: 100vw !important;
+        height: 100vh !important;
+        min-height: 100vh !important;
+        max-height: 100vh !important;
+      }
+
+      .app-page .earth3d-container {
+        width: 100% !important;
+        height: 100% !important;
+        min-height: 100% !important;
+      }
+
+      .app-page canvas {
+        display: block !important;
+      }
+    ")),
+
+    tags$script(HTML("
+      window.setLegionPage = function(pageValue) {
+        const pages = document.querySelectorAll('#app_pages .app-page');
+
+        pages.forEach(function(page) {
+          if (page.dataset.page === pageValue) {
+            page.classList.add('active');
+          } else {
+            page.classList.remove('active');
+          }
+        });
+
+        if (pageValue === 'page_engine') {
+          requestAnimationFrame(function() {
+            window.dispatchEvent(new Event('resize'));
+          });
+        }
+      };
+    ")),
+
+    tags$link(
+      rel = "icon",
+      type = "image/png",
+      href = paste0("logo.png?v=", Sys.time())
+    ),
+    tags$link(
+      rel = "shortcut icon",
+      href = paste0("logo.png?v=", Sys.time())
+    ),
+    tags$link(
+      rel = "apple-touch-icon",
+      href = paste0("logo.png?v=", Sys.time())
+    )
   ),
 
-  navset_hidden(
-    id = "main_nav",
+  div(
+    id = "app_pages",
 
-    nav_panel_hidden(
-      value = "page_launchpad",
-      #mod_01_launchpad_ui("launchpad_v1")
+    div(
+      class = "app-page active",
+      `data-page` = "page_launchpad",
       mod_launcher_02_ui("launchpad_v1")
     ),
 
-    nav_panel_hidden(
-      value = "page_engine",
-      mod_satelliteGlobe_ui("sat01")
+    div(
+      class = "app-page",
+      `data-page` = "page_engine",
+      mod_satelliteGlobe_selected_ui("sat01")
     ),
-    nav_panel_hidden(
-      value = "page_glm",
+
+    div(
+      class = "app-page",
+      `data-page` = "page_glm",
       mod_glm_ui("glm01")
     ),
-    nav_panel_hidden(
-      value = "page_fdcf",
+
+    div(
+      class = "app-page",
+      `data-page` = "page_fdcf",
       mod_fdcf_ui("fdcf01")
     ),
-    nav_panel_hidden(
-      value = "page_lstf",
+
+    div(
+      class = "app-page",
+      `data-page` = "page_lstf",
       mod_lstf_ui("lstf01")
     ),
-    nav_panel_hidden(
-      value = "page_lstf_new",
+
+    div(
+      class = "app-page",
+      `data-page` = "page_lstf_new",
       mod_lstf_new_ui("lstf_new")
     ),
-    nav_panel_hidden(
-      value = "page_fdcf_new",
+
+    div(
+      class = "app-page",
+      `data-page` = "page_fdcf_new",
       mod_fdcf_new_ui("fdcf_new")
     )
   )
 )
 
+# ==============================================================================
 # SERVER
+# ==============================================================================
+
 server <- function(input, output, session) {
 
-  # ---------------------------------------------------------------------------
-  # Estado global de navegación
-  # ---------------------------------------------------------------------------
   current_tab <- reactiveVal("page_launchpad")
-
-  # Guarda el último trigger del launchpad ya procesado
   last_launchpad_trigger <- reactiveVal(0)
 
   # ---------------------------------------------------------------------------
   # Módulos
   # ---------------------------------------------------------------------------
 
-  #launchpad_res <- mod_01_launchpad_server("launchpad_v1")
   launchpad_res <- mod_launcher_02_server("launchpad_v1")
-  #mod_launcher_02_ui
-  mod_satelliteGlobe_server("sat01")
+
+  mod_satelliteGlobe_selected_server("sat01")
 
   mod_glm_server("glm01")
-
   mod_fdcf_server("fdcf01")
-
   mod_lstf_server("lstf01")
   mod_lstf_new_server("lstf_new")
   mod_fdcf_new_server("fdcf_new")
 
   # ---------------------------------------------------------------------------
-  # Navegación: Launchpad -> Engine
+  # Navegación: Launchpad -> páginas
   # ---------------------------------------------------------------------------
 
   observeEvent(launchpad_res(), {
@@ -138,12 +215,10 @@ server <- function(input, output, session) {
     req(!is.null(status$nav_trigger))
     req(!is.null(status$target_page))
 
-    # Si este trigger ya fue procesado, no hacer nada
     if (status$nav_trigger <= last_launchpad_trigger()) {
       return()
     }
 
-    # Registrar que ya procesamos este trigger
     last_launchpad_trigger(status$nav_trigger)
 
     if (status$target_page == "engine") {
@@ -153,28 +228,31 @@ server <- function(input, output, session) {
     if (status$target_page == "glm") {
       current_tab("page_glm")
     }
+
     if (status$target_page == "fdcf") {
       current_tab("page_fdcf")
     }
+
     if (status$target_page == "lstf") {
       current_tab("page_lstf")
     }
+
     if (status$target_page == "lstf_new") {
       current_tab("page_lstf_new")
     }
+
     if (status$target_page == "fdcf_new") {
       current_tab("page_fdcf_new")
     }
   }, ignoreInit = TRUE)
 
   # ---------------------------------------------------------------------------
-  # Navegación: Engine -> Launchpad
+  # Navegación: módulos -> Launchpad
   # ---------------------------------------------------------------------------
 
   observeEvent(input[["sat01-btn_go_home"]], {
     current_tab("page_launchpad")
   }, ignoreInit = TRUE)
-
 
   observeEvent(input[["glm01-btn_go_home"]], {
     current_tab("page_launchpad")
@@ -195,20 +273,25 @@ server <- function(input, output, session) {
   observeEvent(input[["fdcf_new-btn_go_home"]], {
     current_tab("page_launchpad")
   }, ignoreInit = TRUE)
+
   # ---------------------------------------------------------------------------
-  # Único lugar donde realmente se cambia el navset
+  # Cambio real de página
   # ---------------------------------------------------------------------------
 
   observeEvent(current_tab(), {
-    nav_select(
-      id = "main_nav",
-      selected = current_tab(),
-      session = session
+    shinyjs::runjs(
+      sprintf(
+        "window.setLegionPage('%s');",
+        current_tab()
+      )
     )
   }, ignoreInit = FALSE)
 }
 
-# LANZAR APLICACIÓN
+# ==============================================================================
+# LANZAR APP
+# ==============================================================================
+
 shinyApp(
   ui = ui,
   server = server

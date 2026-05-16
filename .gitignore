@@ -5,3 +5,7 @@
 
 # Datos descargados reales
 goes_downloads/
+glm_downloads/
+.RData
+.Rhistory
+.Rproj.user/

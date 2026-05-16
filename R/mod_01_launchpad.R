@@ -1,10 +1,10 @@
 # ==============================================================================
-# MÓDULO LAUNCHPAD - v.0.0.1
+# MÓDULO LAUNCHPAD - v.0.0.2
 # GOES Showcase + Launcher + Extra Gallery
 # ==============================================================================
 
-library("bslib")
-library("shiny")
+# library("bslib")
+# library("shiny")
 
 mod_01_launchpad_ui <- function(id) {
   ns <- NS(id)
@@ -583,7 +583,7 @@ mod_01_launchpad_ui <- function(id) {
             class = "text-center",
             style = "margin-top: -15px; margin-bottom: 25px;",
             span(
-              "v.0.0.1",
+              "v.0.0.2",
               class = "badge bg-dark",
               style = "font-family: monospace;"
             )
@@ -1116,7 +1116,7 @@ mod_01_launchpad_server <- function(id, show_debug = FALSE) {
       showModal(
         modalDialog(
           title = "Cite Legion GOES",
-          p("Legion GOES Team (2026). v.0.0.1."),
+          p("Legion GOES Team (2026). v.0.0.2."),
           easyClose = TRUE
         )
       )

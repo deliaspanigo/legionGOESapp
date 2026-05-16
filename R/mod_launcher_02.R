@@ -1,5 +1,5 @@
 # ==============================================================================
-# MÓDULO LAUNCHPAD - v.0.0.1
+# MÓDULO LAUNCHPAD - v.0.0.3
 # GOES Showcase + Launcher + Extra Gallery
 # ==============================================================================
 
@@ -663,7 +663,7 @@ mod_launcher_02_ui <- function(id) {
             class = "text-center",
             style = "margin-top: -15px; margin-bottom: 25px;",
             span(
-              "v.0.0.1",
+              "v.0.0.3",
               class = "badge version-badge"
             )
           ),
@@ -704,11 +704,13 @@ mod_launcher_02_ui <- function(id) {
 
           div(
             class = "toolbar-right",
-            actionButton(ns("btn_sec_enter"), "Engine", class = "btn-rscience btn-category"),
-            actionButton(ns("btn_glm"), "GLM", class = "btn-rscience btn-category"),
-            actionButton(ns("btn_lstf_new"), "LSTF", class = "btn-rscience btn-category"),
-            actionButton(ns("btn_fdcf_new"), "FDCF", class = "btn-rscience btn-category"),
-            actionButton(ns("btn_extra_gallery"), "Extra", class = "btn-rscience btn-category")
+            actionButton(ns("btn_sec_enter"), "Engine",       class = "btn-rscience btn-category"),
+            actionButton(ns("btn_glm"), "GLM",                class = "btn-rscience btn-category"),
+            actionButton(ns("btn_lstf_new"), "LSTF",          class = "btn-rscience btn-category"),
+            actionButton(ns("btn_fdcf_new"), "FDCF",          class = "btn-rscience btn-category"),
+            actionButton(ns("btn_extra_gallery"), "Extra",    class = "btn-rscience btn-category"),
+            actionButton(ns("btn_download_new"),  "Download", class = "btn-rscience btn-category")
+
           ),
 
           div(
@@ -859,6 +861,7 @@ mod_launcher_02_server <- function(id, show_debug = FALSE) {
     observeEvent(input$btn_lstf,      { fire_navigation("lstf") })
     observeEvent(input$btn_lstf_new,  { fire_navigation("lstf_new") })
     observeEvent(input$btn_fdcf_new,  { fire_navigation("fdcf_new") })
+    observeEvent(input$btn_download_new,  { fire_navigation("download_new") })
 
     # ============================================================
     # GALERÍA EXTRA: PNG + MP4 desde www/super_bag
@@ -1203,7 +1206,7 @@ mod_launcher_02_server <- function(id, show_debug = FALSE) {
       showModal(
         modalDialog(
           title = "Cite Legion GOES",
-          p("Legion GOES Team (2026). v.0.0.1."),
+          p("Legion GOES Team (2026). v.0.0.3"),
           easyClose = TRUE
         )
       )

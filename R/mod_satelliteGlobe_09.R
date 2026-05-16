@@ -555,6 +555,111 @@ earth3d_js <- function(ids_json, ns) {
 
   js
 }
+
+
+# ============================================================
+# PARCHE earth3d_js CORREGIDO
+# La iluminación acompaña el giro visual SIN retroalimentación
+# ============================================================
+
+earth3d_js_base_lighting_fixed <- earth3d_js
+
+earth3d_js <- function(ids_json, ns) {
+  js <- earth3d_js_base_lighting_fixed(ids_json, ns)
+
+  # ------------------------------------------------------------
+  # 1) Crear una dirección solar base que nunca se modifica
+  # ------------------------------------------------------------
+  js <- gsub(
+    "const fixedSunDir = new THREE.Vector3(1, 0, 0).normalize();",
+    paste0(
+      "const fixedSunDir = new THREE.Vector3(1, 0, 0).normalize();\n",
+      "  const baseSunDir = fixedSunDir.clone();"
+    ),
+    js,
+    fixed = TRUE
+  )
+
+  # ------------------------------------------------------------
+  # 2) Evitar que el shader use el mismo objeto fixedSunDir
+  #    porque después el .copy() lo modifica y genera giro infinito
+  # ------------------------------------------------------------
+  js <- gsub(
+    "sunDirection: { value: fixedSunDir }",
+    "sunDirection: { value: fixedSunDir.clone() }",
+    js,
+    fixed = TRUE
+  )
+
+  # ------------------------------------------------------------
+  # 3) Reemplazar updateReferenceAxisTransition por una versión segura
+  # ------------------------------------------------------------
+  old_transition <- paste0(
+    "function updateReferenceAxisTransition() { ",
+    "if (!scene || !targetSceneQuaternion) return; ",
+    "scene.quaternion.slerp(targetSceneQuaternion, 0.08); ",
+    "}"
+  )
+
+  new_transition <- paste0(
+    "function updateShaderSunDirection() {\n",
+    "    if (!scene) return;\n",
+    "\n",
+    "    // La escena puede rotar para mostrar el eje terrestre vertical.\n",
+    "    // Para que la sombra no cambie artificialmente, el Sol del shader\n",
+    "    // debe rotar junto con la escena.\n",
+    "    // IMPORTANTE: usamos baseSunDir, no fixedSunDir, para evitar feedback.\n",
+    "    const visualSunDir = baseSunDir.clone()\n",
+    "      .applyQuaternion(scene.quaternion)\n",
+    "      .normalize();\n",
+    "\n",
+    "    if (earthMaterial && earthMaterial.uniforms.sunDirection) {\n",
+    "      earthMaterial.uniforms.sunDirection.value.copy(visualSunDir);\n",
+    "    }\n",
+    "\n",
+    "    if (overlayMaterial && overlayMaterial.uniforms.sunDirection) {\n",
+    "      overlayMaterial.uniforms.sunDirection.value.copy(visualSunDir);\n",
+    "    }\n",
+    "  }\n",
+    "\n",
+    "  function updateReferenceAxisTransition() {\n",
+    "    if (!scene || !targetSceneQuaternion) return;\n",
+    "    scene.quaternion.slerp(targetSceneQuaternion, 0.08);\n",
+    "    updateShaderSunDirection();\n",
+    "  }"
+  )
+
+  js <- gsub(
+    old_transition,
+    new_transition,
+    js,
+    fixed = TRUE
+  )
+
+  # ------------------------------------------------------------
+  # 4) Actualizar una vez al iniciar
+  # ------------------------------------------------------------
+  old_init_call <- paste0(
+    "createGeoSatellites(); applyLayerVisibility(); updateReferenceAxisMode(); ",
+    "drawOrbitWindow(new Date()); drawWgs84DayNightMap(0, 0, new Date()); animate();"
+  )
+
+  new_init_call <- paste0(
+    "createGeoSatellites(); applyLayerVisibility(); updateReferenceAxisMode(); ",
+    "updateShaderSunDirection(); ",
+    "drawOrbitWindow(new Date()); drawWgs84DayNightMap(0, 0, new Date()); animate();"
+  )
+
+  js <- gsub(
+    old_init_call,
+    new_init_call,
+    js,
+    fixed = TRUE
+  )
+
+  js
+}
+
 # ============================================================
 # Server
 # ============================================================

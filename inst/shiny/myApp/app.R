@@ -2,10 +2,7 @@
 # ORQUESTADOR RSCIENCE 2027 - SIN navset_hidden - FULLSCREEN ESTABLE
 # ==============================================================================
 
-library(shiny)
-library(bslib)
-library(shinyjs)
-
+source(file = "global.R")
 devtools::load_all()
 
 # ==============================================================================
@@ -178,6 +175,12 @@ ui <- page_fillable(
       class = "app-page",
       `data-page` = "page_fdcf_new",
       mod_fdcf_new_ui("fdcf_new")
+    ),
+    div(
+      class = "app-page",
+      `data-page` = "page_download_new",
+      # mod_download_selected_ui("download_new")
+      mod_stone_download_ui("download_new")
     )
   )
 )
@@ -204,6 +207,8 @@ server <- function(input, output, session) {
   mod_lstf_server("lstf01")
   mod_lstf_new_server("lstf_new")
   mod_fdcf_new_server("fdcf_new")
+
+  mod_stone_download_server(id = "download_new", str_folder_path_data_raw = Sys.getenv("LEGION_DOWNLOADS_DIR"))
 
   # ---------------------------------------------------------------------------
   # Navegación: Launchpad -> páginas
@@ -244,6 +249,11 @@ server <- function(input, output, session) {
     if (status$target_page == "fdcf_new") {
       current_tab("page_fdcf_new")
     }
+
+    if (status$target_page == "download_new") {
+      current_tab("page_download_new")
+    }
+
   }, ignoreInit = TRUE)
 
   # ---------------------------------------------------------------------------
@@ -271,6 +281,10 @@ server <- function(input, output, session) {
   }, ignoreInit = TRUE)
 
   observeEvent(input[["fdcf_new-btn_go_home"]], {
+    current_tab("page_launchpad")
+  }, ignoreInit = TRUE)
+
+  observeEvent(input[["download_new-btn_go_home"]], {
     current_tab("page_launchpad")
   }, ignoreInit = TRUE)
 
